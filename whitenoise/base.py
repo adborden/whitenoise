@@ -1,4 +1,5 @@
 from email.utils import formatdate
+import logging
 import os
 from posixpath import normpath
 from wsgiref.headers import Headers
@@ -9,6 +10,7 @@ from .static_file import StaticFile
 from .utils import (ensure_leading_trailing_slash, MissingFileError,
                     stat_regular_file)
 
+logger = logging.getLogger(__name__)
 
 class WhiteNoise(object):
 
@@ -53,10 +55,15 @@ class WhiteNoise(object):
             self.add_files(root, prefix)
 
     def __call__(self, environ, start_response):
+        path_info = environ.get('PATH_INFO')
+        script_name = environ.get('SCRIPT_NAME', '')
+
+        logger.info('PATH_INFO ' + path_info)
+        logger.info('SCRIPT_NAME ' +  script_name)
         if self.autorefresh:
-            static_file = self.find_file(environ['PATH_INFO'])
+            static_file = self.find_file(path_info)
         else:
-            static_file = self.files.get(environ['PATH_INFO'])
+            static_file = self.files.get(path_info)
         if static_file is None:
             return self.application(environ, start_response)
         else:
@@ -87,6 +94,7 @@ class WhiteNoise(object):
             for filename in filenames:
                 path = os.path.join(directory, filename)
                 url = prefix + os.path.relpath(path, root).replace('\\', '/')
+                logging.info(url)
                 self.files[url] = self.get_static_file(path, url)
 
     def find_file(self, url):
